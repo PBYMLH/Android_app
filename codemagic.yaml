@@ -5,7 +5,7 @@ workflows:
     environment:
       vars:
         RN_VERSION: "0.76.5"
-      node: 18
+      node: 22
       java: 17
     scripts:
       - name: Generate React Native project
