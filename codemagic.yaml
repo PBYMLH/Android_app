@@ -10,7 +10,7 @@ workflows:
     scripts:
       - name: Generate React Native project
         script: |
-          npx react-native@latest init OfflineVideoEditor --version $RN_VERSION --pm npm
+          npx @react-native-community/cli init OfflineVideoEditor --version $RN_VERSION --pm npm
       - name: Install dependencies (FFmpeg + pickers)
         script: |
           cd OfflineVideoEditor
