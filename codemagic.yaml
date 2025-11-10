@@ -8,26 +8,17 @@ workflows:
       node: 20
       java: 17
     scripts:
-      - name: Generate React Native project
+      - name: Generate React Native project (new CLI)
         script: |
-          npx react-native@latest init OfflineVideoEditor --version $RN_VERSION --pm npm
+          npx @react-native-community/cli@latest init OfflineVideoEditor --version $RN_VERSION --pm npm
       - name: Install dependencies (FFmpeg + pickers)
         script: |
           cd OfflineVideoEditor
           npm i ffmpeg-kit-react-native-min react-native-document-picker react-native-fs
-
       - name: Copy our app code into the project
         script: |
           cd $CM_BUILD_DIR
           cp app/App.tsx OfflineVideoEditor/App.tsx
-      - name: Patch Gradle to add FFmpegKit Maven repo
-        script: |
-          cd OfflineVideoEditor/android
-          echo "Patching Gradle build file to add FFmpegKit Maven repo..."
-          sed -i '/allprojects {/a\
-              repositories {\
-                  maven { url \"https://maven.pkg.github.com/arthenica/ffmpeg-kit\" }\
-              }' build.gradle
       - name: Build Android debug APK
         script: |
           cd OfflineVideoEditor/android
