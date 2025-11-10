@@ -1,9 +1,11 @@
 workflows:
   android_release:
-    name: Android Release (VideoSplitter)
+    name: Android Release (VideoSplitter + FFmpegKit)
     max_build_duration: 60
 
     environment:
+      groups:
+        - github-secrets          # ✅ loads your GITHUB_TOKEN from Codemagic
       vars:
         RN_VERSION: "0.76.5"
       node: 20
@@ -14,15 +16,14 @@ workflows:
         script: |
           npx @react-native-community/cli@latest init VideoSplitter --version $RN_VERSION --pm npm
 
-      - name: Install dependencies (safe build)
+      - name: Install dependencies (FFmpeg + tools)
         script: |
           cd VideoSplitter
-          npm i react-native-document-picker react-native-fs
+          npm i ffmpeg-kit-react-native react-native-document-picker react-native-fs
 
       - name: Rename app inside Android project
         script: |
           cd VideoSplitter/android/app/src/main/res/values
-          # Replace default app_name in strings.xml
           sed -i 's/app_name">[^<]*/app_name">VideoSplitter/' strings.xml
           echo "✅ App name changed to VideoSplitter"
 
@@ -42,11 +43,31 @@ workflows:
             --bundle-output android/app/src/main/assets/index.android.bundle \
             --assets-dest android/app/src/main/res
 
+      - name: Patch Gradle repositories with GitHub access
+        script: |
+          cd VideoSplitter/android
+          echo "
+          allprojects {
+              repositories {
+                  maven {
+                      url 'https://maven.pkg.github.com/arthenica/ffmpeg-kit'
+                      credentials {
+                          username = 'x-access-token'
+                          password = System.getenv('GITHUB_TOKEN')
+                      }
+                  }
+                  mavenCentral()
+                  google()
+                  maven { url 'https://www.jitpack.io' }
+              }
+          }" >> build.gradle
+          echo "✅ Gradle repo patched for FFmpegKit access"
+
       - name: Build Android release APK
         script: |
           cd VideoSplitter/android
           echo "android.buildToolsVersion=34.0.0" >> ../gradle.properties
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Rename APK
         script: |
