@@ -5,29 +5,39 @@ workflows:
 
     environment:
       groups:
-        - github-secrets          # <- loads your token
+        - github-secrets          # loads your GitHub token from Codemagic
       vars:
         RN_VERSION: "0.76.5"
       node: 20
       java: 17
 
     scripts:
-      - name: Generate React Native project
+      - name: Generate React Native project (new CLI)
         script: |
           npx @react-native-community/cli@latest init OfflineVideoEditor --version $RN_VERSION --pm npm
 
-      - name: Install dependencies
+      - name: Install dependencies (FFmpeg + pickers)
         script: |
           cd OfflineVideoEditor
           npm i ffmpeg-kit-react-native react-native-document-picker react-native-fs
-          echo "ffmpegKitPackage=https" >> ../gradle.properties
+          # enable minimal FFmpegKit package
+          echo "ffmpegKitPackage=https-min" >> ../gradle.properties
 
-      - name: Copy app code
+      - name: Copy our app code into the project
         script: |
           cd $CM_BUILD_DIR
           cp app/App.tsx OfflineVideoEditor/App.tsx
 
-      - name: Patch Gradle repositories (with GitHub auth)
+      - name: Debug check (confirm token is loaded)
+        script: |
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "❌ No GitHub token detected. Please link your 'github-secrets' group in Codemagic."
+            exit 1
+          else
+            echo "✅ GitHub token detected successfully."
+          fi
+
+      - name: Patch Gradle repositories with GitHub authentication
         script: |
           cd OfflineVideoEditor/android
           echo "
@@ -46,16 +56,18 @@ workflows:
               }
           }" >> build.gradle
 
-      - name: Build APK
+      - name: Build Android debug APK
         script: |
           cd OfflineVideoEditor/android
+          # Force stable SDK Build Tools version
           echo "android.buildToolsVersion=34.0.0" >> ../gradle.properties
           ./gradlew assembleDebug
 
-      - name: Rename APK
+      - name: Rename APK for easier identification
         script: |
           cd OfflineVideoEditor/android/app/build/outputs/apk/debug
           mv app-debug.apk OfflineVideoEditor_v1.apk
+          echo "✅ APK renamed to OfflineVideoEditor_v1.apk"
 
     artifacts:
       - OfflineVideoEditor/android/app/build/outputs/apk/debug/OfflineVideoEditor_v1.apk
