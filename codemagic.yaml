@@ -1,6 +1,6 @@
 workflows:
-  android_debug:
-    name: Android Debug (React Native Clean Build)
+  android_release:
+    name: Android Release (VideoSplitter)
     max_build_duration: 60
 
     environment:
@@ -12,46 +12,50 @@ workflows:
     scripts:
       - name: Generate React Native project
         script: |
-          npx @react-native-community/cli@latest init OfflineVideoEditor --version $RN_VERSION --pm npm
+          npx @react-native-community/cli@latest init VideoSplitter --version $RN_VERSION --pm npm
 
-      - name: Install dependencies (basic)
+      - name: Install dependencies (safe build)
         script: |
-          cd OfflineVideoEditor
+          cd VideoSplitter
           npm i react-native-document-picker react-native-fs
-          npm i
+
+      - name: Rename app inside Android project
+        script: |
+          cd VideoSplitter/android/app/src/main/res/values
+          # Replace default app_name in strings.xml
+          sed -i 's/app_name">[^<]*/app_name">VideoSplitter/' strings.xml
+          echo "✅ App name changed to VideoSplitter"
 
       - name: Copy your app code
         script: |
           cd $CM_BUILD_DIR
-          cp app/App.tsx OfflineVideoEditor/App.tsx
+          cp app/App.tsx VideoSplitter/App.tsx
 
-      - name: Patch Gradle repositories
+      - name: Create JS bundle for release
         script: |
-          cd OfflineVideoEditor/android
-          echo "
-          allprojects {
-              repositories {
-                  mavenCentral()
-                  google()
-                  maven { url 'https://www.jitpack.io' }
-              }
-          }" >> build.gradle
+          cd VideoSplitter
+          mkdir -p android/app/src/main/assets
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res
 
-      - name: Build Android debug APK
+      - name: Build Android release APK
         script: |
-          cd OfflineVideoEditor/android
-          # Force stable build tools
+          cd VideoSplitter/android
           echo "android.buildToolsVersion=34.0.0" >> ../gradle.properties
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleRelease --no-daemon
 
       - name: Rename APK
         script: |
-          cd OfflineVideoEditor/android/app/build/outputs/apk/debug
-          mv app-debug.apk OfflineVideoEditor_v1.apk
-          echo "✅ APK created: OfflineVideoEditor_v1.apk"
+          cd VideoSplitter/android/app/build/outputs/apk/release
+          mv app-release.apk VideoSplitter_v1_release.apk
+          echo "✅ Release APK ready: VideoSplitter_v1_release.apk"
 
     artifacts:
-      - OfflineVideoEditor/android/app/build/outputs/apk/debug/OfflineVideoEditor_v1.apk
+      - VideoSplitter/android/app/build/outputs/apk/release/VideoSplitter_v1_release.apk
 
     publishing:
       email:
