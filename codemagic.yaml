@@ -1,34 +1,25 @@
 workflows:
   android_release:
-    name: Android Release (VideoSplitter + FFmpegKit)
+    name: Android Release (VideoSplitter Secure Build)
     max_build_duration: 60
 
     environment:
+      groups:
+        - github-secrets     # Uses your saved GitHub token safely
       vars:
         RN_VERSION: "0.76.5"
-        JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF8"
       node: 20
       java: 17
-      secure: true
 
     scripts:
-      - name: Debug token check
-        script: |
-          if [ -z "$GITHUB_TOKEN" ]; then
-            echo "❌ GITHUB_TOKEN is missing!"
-            exit 1
-          else
-            echo "✅ GITHUB_TOKEN found (length: ${#GITHUB_TOKEN})"
-          fi
-
       - name: Generate React Native project
         script: |
           npx @react-native-community/cli@latest init VideoSplitter --version $RN_VERSION --pm npm
 
-      - name: Install dependencies (FFmpeg + tools)
+      - name: Install dependencies
         script: |
           cd VideoSplitter
-          npm i ffmpeg-kit-react-native react-native-document-picker react-native-fs
+          npm install react-native-document-picker react-native-fs
 
       - name: Rename app inside Android project
         script: |
@@ -52,7 +43,7 @@ workflows:
             --bundle-output android/app/src/main/assets/index.android.bundle \
             --assets-dest android/app/src/main/res
 
-      - name: Patch Gradle repositories with GitHub access
+      - name: Patch Gradle repositories (secured token)
         script: |
           cd VideoSplitter/android
           echo "
@@ -62,7 +53,7 @@ workflows:
                       url 'https://maven.pkg.github.com/arthenica/ffmpeg-kit'
                       credentials {
                           username = 'x-access-token'
-                          password = System.getenv('GITHUB_TOKEN')
+                          password = '$GITHUB_TOKEN'
                       }
                   }
                   mavenCentral()
@@ -70,7 +61,7 @@ workflows:
                   maven { url 'https://www.jitpack.io' }
               }
           }" >> build.gradle
-          echo "✅ Gradle repo patched for FFmpegKit access"
+          echo "✅ Gradle repo patched using secure token"
 
       - name: Build Android release APK
         script: |
