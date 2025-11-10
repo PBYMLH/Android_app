@@ -14,11 +14,26 @@ workflows:
       - name: Install dependencies (FFmpeg + pickers)
         script: |
           cd OfflineVideoEditor
-          npm i ffmpeg-kit-react-native-min react-native-document-picker react-native-fs
+          npm i ffmpeg-kit-react-native react-native-document-picker react-native-fs
       - name: Copy our app code into the project
         script: |
           cd $CM_BUILD_DIR
           cp app/App.tsx OfflineVideoEditor/App.tsx
+      - name: Enable FFmpegKit minimal package
+        script: |
+          cd OfflineVideoEditor/android
+          echo "ffmpegKitPackage=min" >> ../gradle.properties
+      - name: Patch Gradle repositories
+        script: |
+          cd OfflineVideoEditor/android
+          echo "
+          allprojects {
+              repositories {
+                  maven { url 'https://maven.pkg.github.com/arthenica/ffmpeg-kit' }
+                  mavenCentral()
+                  google()
+              }
+          }" >> build.gradle
       - name: Build Android debug APK
         script: |
           cd OfflineVideoEditor/android
