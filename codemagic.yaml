@@ -4,14 +4,23 @@ workflows:
     max_build_duration: 60
 
     environment:
-      groups:
-        - github-secrets          # ✅ loads your GITHUB_TOKEN from Codemagic
       vars:
         RN_VERSION: "0.76.5"
+        JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF8"
       node: 20
       java: 17
+      secure: true
 
     scripts:
+      - name: Debug token check
+        script: |
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "❌ GITHUB_TOKEN is missing!"
+            exit 1
+          else
+            echo "✅ GITHUB_TOKEN found (length: ${#GITHUB_TOKEN})"
+          fi
+
       - name: Generate React Native project
         script: |
           npx @react-native-community/cli@latest init VideoSplitter --version $RN_VERSION --pm npm
