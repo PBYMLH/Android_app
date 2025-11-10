@@ -4,52 +4,58 @@ workflows:
     max_build_duration: 60
 
     environment:
+      groups:
+        - github-secrets          # <- loads your token
       vars:
         RN_VERSION: "0.76.5"
       node: 20
       java: 17
 
     scripts:
-      - name: Generate React Native project (new CLI)
+      - name: Generate React Native project
         script: |
           npx @react-native-community/cli@latest init OfflineVideoEditor --version $RN_VERSION --pm npm
 
-      - name: Install dependencies (FFmpeg + pickers)
+      - name: Install dependencies
         script: |
           cd OfflineVideoEditor
           npm i ffmpeg-kit-react-native react-native-document-picker react-native-fs
-          # use lightweight https-min package from Maven Central
-          echo "ffmpegKitPackage=https-min" >> ../gradle.properties
+          echo "ffmpegKitPackage=https" >> ../gradle.properties
 
-      - name: Copy our app code into the project
+      - name: Copy app code
         script: |
           cd $CM_BUILD_DIR
           cp app/App.tsx OfflineVideoEditor/App.tsx
 
-      - name: Patch Gradle repositories (Maven Central only)
+      - name: Patch Gradle repositories (with GitHub auth)
         script: |
           cd OfflineVideoEditor/android
           echo "
           allprojects {
               repositories {
+                  maven {
+                      url 'https://maven.pkg.github.com/arthenica/ffmpeg-kit'
+                      credentials {
+                          username = 'x-access-token'
+                          password = System.getenv('GITHUB_TOKEN')
+                      }
+                  }
                   mavenCentral()
                   google()
                   maven { url 'https://www.jitpack.io' }
               }
           }" >> build.gradle
 
-      - name: Build Android debug APK
+      - name: Build APK
         script: |
           cd OfflineVideoEditor/android
-          # Force stable SDK Build Tools version
           echo "android.buildToolsVersion=34.0.0" >> ../gradle.properties
           ./gradlew assembleDebug
 
-      - name: Rename APK for easier identification
+      - name: Rename APK
         script: |
           cd OfflineVideoEditor/android/app/build/outputs/apk/debug
           mv app-debug.apk OfflineVideoEditor_v1.apk
-          echo "✅ APK renamed to OfflineVideoEditor_v1.apk"
 
     artifacts:
       - OfflineVideoEditor/android/app/build/outputs/apk/debug/OfflineVideoEditor_v1.apk
