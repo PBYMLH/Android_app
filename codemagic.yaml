@@ -2,7 +2,10 @@ workflows:
   android_debug:
     name: Android Debug (React Native + FFmpegKit)
     max_build_duration: 60
+
     environment:
+      groups:
+        - github-secrets     # 👈 loads your GITHUB_TOKEN from the variable group
       vars:
         RN_VERSION: "0.76.5"
       node: 20
@@ -28,13 +31,19 @@ workflows:
           cd OfflineVideoEditor/android
           echo "ffmpegKitPackage=min" >> ../gradle.properties
 
-      - name: Patch Gradle repositories
+      - name: Patch Gradle repositories with GitHub auth
         script: |
           cd OfflineVideoEditor/android
           echo "
           allprojects {
               repositories {
-                  maven { url 'https://maven.pkg.github.com/arthenica/ffmpeg-kit' }
+                  maven {
+                      url 'https://maven.pkg.github.com/arthenica/ffmpeg-kit'
+                      credentials {
+                          username = 'x-access-token'
+                          password = System.getenv('GITHUB_TOKEN')
+                      }
+                  }
                   mavenCentral()
                   google()
               }
