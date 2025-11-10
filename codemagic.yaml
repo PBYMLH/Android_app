@@ -7,22 +7,27 @@ workflows:
         RN_VERSION: "0.76.5"
       node: 20
       java: 17
+
     scripts:
       - name: Generate React Native project (new CLI)
         script: |
           npx @react-native-community/cli@latest init OfflineVideoEditor --version $RN_VERSION --pm npm
+
       - name: Install dependencies (FFmpeg + pickers)
         script: |
           cd OfflineVideoEditor
           npm i ffmpeg-kit-react-native react-native-document-picker react-native-fs
+
       - name: Copy our app code into the project
         script: |
           cd $CM_BUILD_DIR
           cp app/App.tsx OfflineVideoEditor/App.tsx
+
       - name: Enable FFmpegKit minimal package
         script: |
           cd OfflineVideoEditor/android
           echo "ffmpegKitPackage=min" >> ../gradle.properties
+
       - name: Patch Gradle repositories
         script: |
           cd OfflineVideoEditor/android
@@ -34,9 +39,27 @@ workflows:
                   google()
               }
           }" >> build.gradle
+
       - name: Build Android debug APK
         script: |
           cd OfflineVideoEditor/android
+          # Force stable SDK Build Tools version to avoid broken 35.0.0
+          echo "android.buildToolsVersion=34.0.0" >> ../gradle.properties
           ./gradlew assembleDebug
+
+      - name: Rename APK for easier identification
+        script: |
+          cd OfflineVideoEditor/android/app/build/outputs/apk/debug
+          mv app-debug.apk OfflineVideoEditor_v1.apk
+          echo "✅ APK renamed to OfflineVideoEditor_v1.apk"
+
     artifacts:
-      - OfflineVideoEditor/android/app/build/outputs/apk/debug/app-debug.apk
+      - OfflineVideoEditor/android/app/build/outputs/apk/debug/OfflineVideoEditor_v1.apk
+
+    publishing:
+      email:
+        recipients:
+          - dehradunnn@gmail.com
+        notify:
+          success: true
+          failure: true
