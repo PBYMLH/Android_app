@@ -2,7 +2,7 @@ import React, { useCallback, useState } from "react";
 import { SafeAreaView, View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from "react-native";
 import DocumentPicker from "react-native-document-picker";
 import RNFS from "react-native-fs";
-import { FFmpegKit, ReturnCode } from "ffmpeg-kit-react-native";
+import { FFmpegKit, ReturnCode } from "ffmpeg-kit-react-native-min";
 
 
 const nowStamp = () => new Date().toISOString().replace(/[:.]/g, "-");
