@@ -1,55 +1,36 @@
 workflows:
   android_debug:
-    name: Android Debug (React Native + FFmpegKit)
+    name: Android Debug (React Native Clean Build)
     max_build_duration: 60
 
     environment:
-      groups:
-        - github-secrets          # loads your GitHub token from Codemagic
       vars:
         RN_VERSION: "0.76.5"
       node: 20
       java: 17
 
     scripts:
-      - name: Generate React Native project (new CLI)
+      - name: Generate React Native project
         script: |
           npx @react-native-community/cli@latest init OfflineVideoEditor --version $RN_VERSION --pm npm
 
-      - name: Install dependencies (FFmpeg + pickers)
+      - name: Install dependencies (basic)
         script: |
           cd OfflineVideoEditor
-          npm i ffmpeg-kit-react-native react-native-document-picker react-native-fs
-          # enable minimal FFmpegKit package
-          echo "ffmpegKitPackage=https-min" >> ../gradle.properties
+          npm i react-native-document-picker react-native-fs
+          npm i
 
-      - name: Copy our app code into the project
+      - name: Copy your app code
         script: |
           cd $CM_BUILD_DIR
           cp app/App.tsx OfflineVideoEditor/App.tsx
 
-      - name: Debug check (confirm token is loaded)
-        script: |
-          if [ -z "$GITHUB_TOKEN" ]; then
-            echo "❌ No GitHub token detected. Please link your 'github-secrets' group in Codemagic."
-            exit 1
-          else
-            echo "✅ GitHub token detected successfully."
-          fi
-
-      - name: Patch Gradle repositories with GitHub authentication
+      - name: Patch Gradle repositories
         script: |
           cd OfflineVideoEditor/android
           echo "
           allprojects {
               repositories {
-                  maven {
-                      url 'https://maven.pkg.github.com/arthenica/ffmpeg-kit'
-                      credentials {
-                          username = 'x-access-token'
-                          password = System.getenv('GITHUB_TOKEN')
-                      }
-                  }
                   mavenCentral()
                   google()
                   maven { url 'https://www.jitpack.io' }
@@ -59,15 +40,15 @@ workflows:
       - name: Build Android debug APK
         script: |
           cd OfflineVideoEditor/android
-          # Force stable SDK Build Tools version
+          # Force stable build tools
           echo "android.buildToolsVersion=34.0.0" >> ../gradle.properties
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace
 
-      - name: Rename APK for easier identification
+      - name: Rename APK
         script: |
           cd OfflineVideoEditor/android/app/build/outputs/apk/debug
           mv app-debug.apk OfflineVideoEditor_v1.apk
-          echo "✅ APK renamed to OfflineVideoEditor_v1.apk"
+          echo "✅ APK created: OfflineVideoEditor_v1.apk"
 
     artifacts:
       - OfflineVideoEditor/android/app/build/outputs/apk/debug/OfflineVideoEditor_v1.apk
