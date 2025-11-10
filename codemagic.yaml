@@ -1,6 +1,6 @@
 workflows:
   android_release:
-    name: Android Release (VideoSplitter Secure Build)
+    name: Android Release (VideoSplitter)
     max_build_duration: 60
 
     environment:
@@ -19,7 +19,8 @@ workflows:
       - name: Install dependencies
         script: |
           cd VideoSplitter
-          npm install react-native-document-picker react-native-fs
+          npm install react-native-document-picker react-native-fs ffmpeg-kit-react-native
+          echo "✅ Dependencies installed: FFmpegKit, FS, and DocumentPicker"
 
       - name: Rename app inside Android project
         script: |
@@ -31,6 +32,7 @@ workflows:
         script: |
           cd $CM_BUILD_DIR
           cp app/App.tsx VideoSplitter/App.tsx
+          echo "✅ Custom app code copied"
 
       - name: Create JS bundle for release
         script: |
@@ -42,6 +44,7 @@ workflows:
             --entry-file index.js \
             --bundle-output android/app/src/main/assets/index.android.bundle \
             --assets-dest android/app/src/main/res
+          echo "✅ JS bundle created successfully"
 
       - name: Patch Gradle repositories (secured token)
         script: |
@@ -61,13 +64,14 @@ workflows:
                   maven { url 'https://www.jitpack.io' }
               }
           }" >> build.gradle
-          echo "✅ Gradle repo patched using secure token"
+          echo "✅ Gradle repo patched with secure token"
 
       - name: Build Android release APK
         script: |
           cd VideoSplitter/android
           echo "android.buildToolsVersion=34.0.0" >> ../gradle.properties
           ./gradlew assembleRelease --no-daemon --stacktrace
+          echo "✅ Release APK built successfully"
 
       - name: Rename APK
         script: |
